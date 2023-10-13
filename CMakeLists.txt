@@ -104,6 +104,7 @@ set(AVIF_PLATFORM_DEFINITIONS)
 set(AVIF_PLATFORM_INCLUDES)
 set(AVIF_PLATFORM_SYSTEM_INCLUDES)
 set(AVIF_PLATFORM_LIBRARIES)
+set(AVIF_LINK_LIBRARIES)
 
 # A macro that wraps find_package, preferring static libraries if this is a static build
 # Should only be used for libraries linked against avif, not for those only used
@@ -673,10 +674,12 @@ if(BUILD_SHARED_LIBS)
     if(NOT libyuv_FOUND)
         target_include_directories(avif_internal PRIVATE ${libavif_SOURCE_DIR}/third_party/libyuv/include/)
     endif()
+    list(APPEND AVIF_LINK_LIBRARIES avif ${AVIF_CODEC_LIBRARIES} ${AVIF_PLATFORM_LIBRARIES})
 else()
     add_library(avif_internal ALIAS avif)
     include(merge_static_libs)
-    merge_static_libs(avif ${AVIF_CODEC_LIBRARIES} ${AVIF_PLATFORM_LIBRARIES})
+    merge_static_libs(avif_static avif UNMERGED_LIBRARIES ${AVIF_CODEC_LIBRARIES} ${AVIF_PLATFORM_LIBRARIES})
+    list(APPEND AVIF_LINK_LIBRARIES avif_static ${UNMERGED_LIBRARIES})
 endif()
 
 option(AVIF_BUILD_EXAMPLES "Build avif examples." OFF)
@@ -688,7 +691,7 @@ if(AVIF_BUILD_EXAMPLES)
         if(AVIF_USE_CXX)
             set_target_properties(${EXAMPLE} PROPERTIES LINKER_LANGUAGE "CXX")
         endif()
-        target_link_libraries(${EXAMPLE} avif ${AVIF_PLATFORM_LIBRARIES})
+        target_link_libraries(${EXAMPLE} ${AVIF_LINK_LIBRARIES})
     endforeach()
 endif()
 
@@ -738,7 +741,7 @@ if(AVIF_BUILD_APPS OR (AVIF_BUILD_TESTS AND AVIF_ENABLE_GTEST))
         avif_apps STATIC apps/shared/avifexif.c apps/shared/avifjpeg.c apps/shared/avifpng.c apps/shared/avifutil.c
                          apps/shared/iccjpeg.c apps/shared/iccmaker.c apps/shared/y4m.c
     )
-    target_link_libraries(avif_apps avif ${AVIF_PLATFORM_LIBRARIES} ${PNG_LIBRARY} ${ZLIB_LIBRARY} ${JPEG_LIBRARY})
+    target_link_libraries(avif_apps ${AVIF_LINK_LIBRARIES} ${PNG_LIBRARY} ${ZLIB_LIBRARY} ${JPEG_LIBRARY})
     # In GitHub CI's macos-latest os image, /usr/local/include has not only the headers of libpng
     # and libjpeg but also the headers of an older version of libavif. Put the avif include
     # directory before ${PNG_PNG_INCLUDE_DIR} ${JPEG_INCLUDE_DIR} to prevent picking up old libavif
