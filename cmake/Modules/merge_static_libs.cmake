@@ -1,11 +1,21 @@
-function(merge_static_libs new_target target unmerged_libs)
+function(merge_static_libs target unmerged_libs)
   set(args ${ARGN})
 
   set(dependencies)
 
   foreach(lib ${args})
-    if("${lib}" MATCHES "(\\${CMAKE_STATIC_LIBRARY_SUFFIX}|dav1d\.a)$")
+    if(TARGET "${lib}")
+      get_target_property(target_type ${lib} TYPE)
+
+      if(${target_type} STREQUAL "STATIC_LIBRARY")
+        list(APPEND libs $<TARGET_FILE:${lib}>)
+        list(APPEND dependencies "${lib}")
+      else()
+        list(APPEND unmerged_libs "${lib}")
+      endif()
+    elseif("${lib}" MATCHES "(\\${CMAKE_STATIC_LIBRARY_SUFFIX}|dav1d\.a)$")
       list(APPEND libs "${lib}")
+
       if(EXISTS "${lib}")
         list(APPEND dependencies "${lib}")
       endif()
@@ -14,42 +24,51 @@ function(merge_static_libs new_target target unmerged_libs)
     endif()
   endforeach()
 
-  add_library(${new_target} INTERFACE)
-  target_link_libraries(${new_target} INTERFACE ${target})
-  add_dependencies(${new_target} ${new_target}_cmd_target)
-
-  add_custom_target(
-    ${new_target}_cmd_target ALL
-    DEPENDS ${new_target}_cmd
-    COMMENT "Merge static libraries")
+  set(source_file ${CMAKE_CURRENT_BINARY_DIR}/${target}_depends.c)
+  add_library(${target} STATIC ${source_file})
 
   add_custom_command(
-    OUTPUT ${new_target}_cmd
-    DEPENDS ${target} ${dependencies}
+    OUTPUT ${source_file}
+    COMMAND ${CMAKE_COMMAND} -E touch ${source_file}
+    DEPENDS ${dependencies}
+  )
+
+  # Add transitive dependencies to ${target} by creating an intermediate
+  # target, since add_dependencies can only be called with top-level targets
+  add_custom_target(${target}_cmd_target DEPENDS ${source_file})
+  add_dependencies(${target} ${target}_cmd_target)
+
+  add_custom_command(
+    TARGET ${target}
+    POST_BUILD
     COMMENT "Merge static libraries"
-    COMMAND ${CMAKE_COMMAND} -E rename $<TARGET_FILE:${target}> $<TARGET_FILE:${target}>.tmp
+    COMMAND ${CMAKE_COMMAND} -E remove $<TARGET_FILE:${target}>
   )
 
   if(APPLE)
     add_custom_command(
-      OUTPUT ${new_target}_cmd APPEND
-      COMMAND xcrun libtool -static -o $<TARGET_FILE:${target}> $<TARGET_FILE:${target}>.tmp ${libs}
+      TARGET ${target}
+      POST_BUILD
+      COMMAND xcrun libtool -static -o $<TARGET_FILE:${target}> ${libs}
     )
   elseif(CMAKE_C_COMPILER_ID MATCHES "^(Clang|GNU|Intel|IntelLLVM)$")
     add_custom_command(
-      OUTPUT ${new_target}_cmd APPEND
+      TARGET ${target}
+      POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E echo CREATE $<TARGET_FILE:${target}> >script.ar
-      COMMAND ${CMAKE_COMMAND} -E echo ADDLIB $<TARGET_FILE:${target}>.tmp >>script.ar
     )
 
     foreach(lib ${libs})
-      add_custom_command(OUTPUT ${new_target}_cmd APPEND
+      add_custom_command(
+        TARGET ${target}
+        POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E echo ADDLIB ${lib} >>script.ar
       )
     endforeach()
 
     add_custom_command(
-      OUTPUT ${new_target}_cmd APPEND
+      TARGET ${target}
+      POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E echo SAVE >>script.ar
       COMMAND ${CMAKE_COMMAND} -E echo END >>script.ar
       COMMAND ${CMAKE_AR} -M <script.ar
@@ -67,17 +86,11 @@ function(merge_static_libs new_target target unmerged_libs)
     endif()
 
     add_custom_command(
-      OUTPUT ${new_target}_cmd APPEND
-      COMMAND ${BUNDLE_TOOL} /NOLOGO /OUT:$<TARGET_FILE:${target}> $<TARGET_FILE:${target}>.tmp ${libs}
+      TARGET ${target}
+      POST_BUILD
+      COMMAND ${BUNDLE_TOOL} /NOLOGO /OUT:$<TARGET_FILE:${target}> ${libs}
     )
   else()
     message(FATAL_ERROR "Unsupported platform for static link merging")
   endif()
-
-  add_custom_command(
-    OUTPUT ${new_target}_cmd APPEND
-    COMMAND ${CMAKE_COMMAND} -E remove $<TARGET_FILE:${target}>.tmp
-  )
-
-  set_source_files_properties(${new_target}_cmd PROPERTIES SYMBOLIC "true")
 endfunction()
