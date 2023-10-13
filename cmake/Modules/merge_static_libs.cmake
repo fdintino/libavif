@@ -1,9 +1,14 @@
 function(merge_static_libs new_target target unmerged_libs)
   set(args ${ARGN})
 
+  set(dependencies)
+
   foreach(lib ${args})
     if("${lib}" MATCHES "(\\${CMAKE_STATIC_LIBRARY_SUFFIX}|dav1d\.a)$")
       list(APPEND libs "${lib}")
+      if(EXISTS "${lib}")
+        list(APPEND dependencies "${lib}")
+      endif()
     else()
       list(APPEND unmerged_libs "${lib}")
     endif()
@@ -20,7 +25,7 @@ function(merge_static_libs new_target target unmerged_libs)
 
   add_custom_command(
     OUTPUT ${new_target}_cmd
-    DEPENDS ${target} ${libs}
+    DEPENDS ${target} ${dependencies}
     COMMENT "Merge static libraries"
     COMMAND ${CMAKE_COMMAND} -E rename $<TARGET_FILE:${target}> $<TARGET_FILE:${target}>.tmp
   )
