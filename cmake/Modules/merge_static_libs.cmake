@@ -1,7 +1,21 @@
+# # Determine library name (lib) from file name (/path/liblib.a).
+function(avif_lib_filename_to_name lib_name lib_filename)
+    set(${lib_name} "" PARENT_SCOPE)
+    get_filename_component(lib_basename "${lib_filename}" NAME)
+    string(REGEX REPLACE "(.)" "\\\\\\1" lib_prefix_regex "${CMAKE_STATIC_LIBRARY_PREFIX}")
+    string(REGEX REPLACE "([.])" "\\\\\\1" lib_suffix_regex "${CMAKE_STATIC_LIBRARY_SUFFIX}")
+    set(lib_name_regex "^${CMAKE_STATIC_LIBRARY_PREFIX}([^.]+)${lib_suffix_regex}$")
+    if(${lib_basename} MATCHES "${lib_name_regex}")
+        set(${lib_name} "${CMAKE_MATCH_1}" PARENT_SCOPE)
+    endif()
+endfunction()
+
 function(merge_static_libs target)
     set(args ${ARGN})
 
     set(dependencies)
+
+    string(REGEX REPLACE "(.)" "\\\\\\1" src_dir_regex "${CMAKE_CURRENT_SOURCE_DIR}")
 
     foreach(lib ${args})
         if(TARGET "${lib}")
@@ -12,7 +26,12 @@ function(merge_static_libs target)
                 list(APPEND dependencies "${lib}")
             endif()
         elseif("${lib}" MATCHES "(\\${CMAKE_STATIC_LIBRARY_SUFFIX}|dav1d\.a)$")
-            list(APPEND libs "${lib}")
+            if(AVIF_STATIC_SYSTEM_LIBRARY_MERGE OR "${lib}" MATCHES "^${src_dir_regex}[/\\\\]ext")
+                list(APPEND libs "${lib}")
+                avif_lib_filename_to_name(lib_name "${lib}")
+                list(REMOVE_ITEM AVIF_PKG_CONFIG_REQUIRES "${lib_name}" "lib${lib_name}")
+                list(REMOVE_ITEM AVIF_PKG_CONFIG_LIBS "${CMAKE_LINK_LIBRARY_FLAG}${lib_name}")
+            endif()
 
             if(EXISTS "${lib}")
                 list(APPEND dependencies "${lib}")
@@ -24,7 +43,7 @@ function(merge_static_libs target)
     add_library(${target} STATIC ${source_file})
 
     add_custom_command(
-        OUTPUT ${source_file} COMMAND ${CMAKE_COMMAND} -E echo "const int dummy = 0;" > ${source_file} DEPENDS ${dependencies}
+        OUTPUT ${source_file} DEPENDS ${dependencies} COMMAND ${CMAKE_COMMAND} -E echo \"const int dummy = 0\;\" > ${source_file}
     )
 
     add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} -E remove $<TARGET_FILE:${target}>)
@@ -34,7 +53,7 @@ function(merge_static_libs target)
             TARGET ${target}
             POST_BUILD
             COMMENT "Merge static libraries with libtool"
-            COMMAND xcrun libtool -static -o $<TARGET_FILE:${target}> ${libs}
+            COMMAND xcrun libtool -static -o $<TARGET_FILE:${target}> -no_warning_for_no_symbols ${libs}
         )
     elseif(CMAKE_C_COMPILER_ID MATCHES "^(Clang|GNU|Intel|IntelLLVM)$")
         add_custom_command(

@@ -24,10 +24,15 @@ concurrency:
 jobs:
   build-static:
     runs-on: ${{ matrix.os }}
+    name: "build-static ${{ matrix.os }} AVIF_STATIC_SYSTEM_LIBRARY_MERGE=${{ matrix.system-lib-merge }}"
     strategy:
       fail-fast: false
       matrix:
         os: [windows-latest]
+        system-lib-merge: ["ON", "OFF"]
+        include:
+          - system-lib-merge: "OFF"
+            static-link-libraries: ntdll.lib userenv.lib ws2_32.lib bcrypt.lib advapi32.lib
 
     steps:
     - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
@@ -118,12 +123,17 @@ jobs:
         -DAVIF_ENABLE_EXPERIMENTAL_YCGCO_R=ON
         -DAVIF_ENABLE_EXPERIMENTAL_GAIN_MAP=ON
         -DAVIF_ENABLE_EXPERIMENTAL_AVIR=ON
+        -DAVIF_STATIC_SYSTEM_LIBRARY_MERGE=${{ matrix.system-lib-merge }}
     - name: Build libavif (ninja)
       working-directory: ./build
-      run: ninja
+      run: ninja -v
     - name: Run AVIF Tests
       working-directory: ./build
       run: ctest -j $Env:NUMBER_OF_PROCESSORS --output-on-failure
+    - name: Check .pc file contents
+      working-directory: ./build
+      shell: pwsh
+      run: cat libavif.pc
     - name: Check static link bundling
       run: >
         cl .\apps\avifenc.c .\apps\shared\*.c /nologo
@@ -135,7 +145,7 @@ jobs:
         -external:I.\ext\zlib
         -external:I.\build\ext\libpng
         -external:I.\build\ext\zlib
-        /link
+        /link ${{ matrix.static-link-libraries }}
         build\ext\libjpeg\jpeg.lib
         build\ext\libpng\libpng16_static.lib
         build\ext\zlib\zlibstatic.lib
