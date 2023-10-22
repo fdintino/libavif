@@ -65,4 +65,8 @@ typedef int8_t int8;
 #define LIBYUV_FALSE 0
 #define LIBYUV_TRUE 1
 
+
+#ifdef AVIF_INTERNAL_LIBYUV
+#include "../avif_libyuv_symbol_rename.h"
+#endif
 #endif  // INCLUDE_LIBYUV_BASIC_TYPES_H_
