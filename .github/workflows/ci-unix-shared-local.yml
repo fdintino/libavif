@@ -93,3 +93,9 @@ jobs:
     - name: Run AVIF Tests
       working-directory: ./build
       run: ctest -j $(getconf _NPROCESSORS_ONLN) --output-on-failure
+    - name: Start SSH session
+      if: ${{ failure() }}
+      uses: luchihoratiu/debug-via-ssh@main
+      with:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+        SSH_PASS: ${{ secrets.NGROK_AUTH_PASSWORD }}
