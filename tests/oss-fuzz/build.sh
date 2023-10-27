@@ -19,9 +19,6 @@
 # https://github.com/google/oss-fuzz/blob/master/projects/libavif/build.sh
 # It builds the different fuzz targets.
 
-# build dependencies
-cd ext && bash dav1d.cmd && bash libyuv.cmd && cd ..
-
 # build libavif
 mkdir build
 cd build
@@ -33,8 +30,7 @@ ninja
 # build fuzzer
 $CXX $CXXFLAGS -std=c++11 -I../include \
     ../tests/oss-fuzz/avif_decode_fuzzer.cc -o $OUT/avif_decode_fuzzer \
-    $LIB_FUZZING_ENGINE libavif.a ../ext/dav1d/build/src/libdav1d.a \
-    ../ext/libyuv/build/libyuv.a
+    $LIB_FUZZING_ENGINE libavif.a
 
 # copy seed corpus
 cp $SRC/avif_decode_seed_corpus.zip $OUT/

@@ -30,13 +30,13 @@ jobs:
         profile: minimal
         toolchain: stable
         override: true
+    - name: Install cargo-c
+      env:
+        LINK: https://github.com/lu-zero/cargo-c/releases/latest/download
+        CARGO_C_FILE: cargo-c-x86_64-unknown-linux-musl.tar.gz
+      run: |
+        curl -L $LINK/$CARGO_C_FILE | tar xz -C ~/.cargo/bin
 
-    - name: Cache external dependencies
-      id: cache-ext
-      uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
-      with:
-        path: ext
-        key: ${{ runner.os }}-static-av2-${{ hashFiles('ext/*.cmd') }}
     - name: Setup cmake
       uses: jwlawson/actions-setup-cmake@187efd9581ed20ee4e03c0dfb9ac2cd5896c4835 # v1.14.1
       with:
@@ -49,35 +49,6 @@ jobs:
         version: 2.15.05
     - uses: seanmiddleditch/gha-setup-ninja@8b297075da4cd2a5f1fd21fe011b499edf06e9d2 # v4
     - run: pip install meson
-    - name: Build avm
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      run: bash -e avm.cmd
-    - name: Build dav1d
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      run: bash -e dav1d.cmd
-    - name: Build rav1e
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      run: bash -e rav1e.cmd
-    - name: Build SVT-AV1
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      run: bash -e svt.cmd
-    - name: Build libyuv
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      run: bash -e libyuv.cmd
-    - name: Build libsharpyuv
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      run: bash -e libsharpyuv.cmd
-    - name: Build GoogleTest
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      # Note: "apt install googletest" is sometimes insufficient for find_package(GTest) so build in ext/ instead.
-      run: bash -e googletest.cmd
 
     - name: Prepare libavif (cmake)
       run: >
@@ -93,6 +64,15 @@ jobs:
         -DAVIF_LOCAL_LIBSHARPYUV=ON
         -DAVIF_BUILD_EXAMPLES=ON -DAVIF_BUILD_APPS=ON
         -DAVIF_BUILD_TESTS=ON -DAVIF_ENABLE_GTEST=ON -DAVIF_LOCAL_GTEST=ON
+    - name: Cache cargo registry
+      uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+      continue-on-error: true
+      with:
+        path: ~/.cargo/registry/cache
+        key: cargo-registry-${{ runner.os }}-${{ hashFiles('ext/rav1e/Cargo.lock') }}-unix-static-av2
+        restore-keys: |
+          cargo-registry-${{ runner.os }}-${{ hashFiles('ext/rav1e/Cargo.lock') }}-
+          cargo-registry-${{ runner.os }}-
     - name: Build libavif (ninja)
       working-directory: ./build
       run: ninja
