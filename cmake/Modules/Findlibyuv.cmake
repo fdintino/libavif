@@ -59,3 +59,15 @@ find_package_handle_standard_args(
 # show the LIBYUV_INCLUDE_DIR, LIBYUV_LIBRARY and LIBYUV_LIBRARIES variables only
 # in the advanced view
 mark_as_advanced(LIBYUV_INCLUDE_DIR LIBYUV_LIBRARY LIBYUV_LIBRARIES)
+
+if(LIBYUV_FOUND)
+    if("${YUV_LIBRARY}" MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$")
+        add_library(yuv STATIC IMPORTED GLOBAL)
+    else()
+        add_library(yuv SHARED IMPORTED GLOBAL)
+    endif()
+    set_target_properties(yuv PROPERTIES IMPORTED_LOCATION "${LIBYUV_LIBRARY}")
+    target_include_directories(yuv INTERFACE "${LIBYUV_INCLUDE_DIR}")
+    add_library(yuv::yuv ALIAS yuv)
+    set(LIBYUV_LIBRARY yuv)
+endif()

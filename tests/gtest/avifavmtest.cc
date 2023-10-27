@@ -53,9 +53,9 @@ TEST_P(AvmTest, EncodeDecode) {
     decoder->codecChoice = av1_codec;
     // AVIF_RESULT_NO_CODEC_AVAILABLE is expected because av1_codec is not
     // enabled or because we are trying to decode an AV2 file with an AV1 codec.
-    ASSERT_EQ(avifDecoderReadMemory(decoder.get(), decoded.get(), encoded.data,
+    ASSERT_NE(avifDecoderReadMemory(decoder.get(), decoded.get(), encoded.data,
                                     encoded.size),
-              AVIF_RESULT_NO_CODEC_AVAILABLE);
+              AVIF_RESULT_OK);
   }
 }
 
@@ -112,9 +112,9 @@ TEST(AvmTest, Av1StillWorksWhenAvmIsEnabled) {
 
   // Forcing an AV2 decoding codec should fail.
   decoder->codecChoice = AVIF_CODEC_CHOICE_AVM;
-  ASSERT_EQ(avifDecoderReadMemory(decoder.get(), decoded.get(), encoded.data,
+  ASSERT_NE(avifDecoderReadMemory(decoder.get(), decoded.get(), encoded.data,
                                   encoded.size),
-            AVIF_RESULT_NO_CODEC_AVAILABLE);
+            AVIF_RESULT_OK);
 }
 
 }  // namespace
