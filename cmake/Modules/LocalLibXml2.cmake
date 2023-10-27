@@ -1,9 +1,25 @@
-set(LIB_FILENAME "${AVIF_SOURCE_DIR}/ext/libxml2/install.libavif/lib/${AVIF_LIBRARY_PREFIX}xml2${CMAKE_STATIC_LIBRARY_SUFFIX}")
-if(NOT EXISTS "${LIB_FILENAME}")
-    message(FATAL_ERROR "libavif: ${LIB_FILENAME} is missing, bailing out")
+set(AVIF_LOCAL_LIBXML_GIT_TAG "v2.11.5")
+
+set(LIBXML2_WITH_PYTHON OFF CACHE INTERNAL "-")
+set(LIBXML2_WITH_ZLIB OFF CACHE INTERNAL "-")
+set(LIBXML2_WITH_LZMA OFF CACHE INTERNAL "-")
+set(LIBXML2_WITH_ICONV OFF CACHE INTERNAL "-")
+set(LIBXML2_WITH_TESTS OFF CACHE INTERNAL "-")
+set(LIBXML2_WITH_PROGRAMS OFF CACHE INTERNAL "-")
+set(LIBXML2_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/ext/libxml2")
+if(ANDROID_ABI)
+    set(LIBXML2_BINARY_DIR "${LIBXML2_BINARY_DIR}/${ANDROID_ABI}")
 endif()
 
-add_library(LibXml2 STATIC IMPORTED GLOBAL)
-set_target_properties(LibXml2 PROPERTIES IMPORTED_LOCATION "${LIB_FILENAME}" AVIF_LOCAL ON)
-target_include_directories(LibXml2 INTERFACE "${AVIF_SOURCE_DIR}/ext/libxml2/install.libavif/include/libxml2")
-add_library(LibXml2::LibXml2 ALIAS LibXml2)
+FetchContent_Declare(
+    libxml2
+    GIT_REPOSITORY "https://gitlab.gnome.org/GNOME/libxml2.git"
+    SOURCE_DIR "${AVIF_SOURCE_DIR}/ext/libxml2" BINARY_DIR "${LIBXML2_BINARY_DIR}"
+    GIT_TAG "${AVIF_LOCAL_LIBXML_GIT_TAG}"
+    GIT_SHALLOW ON
+    UPDATE_COMMAND ""
+)
+
+avif_fetchcontent_populate_cmake(libxml2)
+
+set_property(TARGET LibXml2 PROPERTY AVIF_LOCAL ON)

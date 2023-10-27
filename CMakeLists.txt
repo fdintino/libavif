@@ -8,11 +8,22 @@ if(POLICY CMP0092)
     cmake_policy(SET CMP0092 NEW)
 endif()
 
+# Prevent warnings in CMake>=3.24 for ExternalProject_Add()
+# see https://cmake.org/cmake/help/latest/policy/CMP0135.html
+if(POLICY CMP0135)
+    cmake_policy(SET CMP0135 NEW) # valid for DOWNLOAD_EXTRACT_TIMESTAMP option in CMake 3.24 and later
+endif()
+
 # The root directory of the avif source
 set(AVIF_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # Specify search path for CMake modules to be loaded by include() and find_package()
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
+
+include(ExternalProject)
+include(FetchContent)
+include(FindPkgConfig)
+include(AvifExternalProjectUtils)
 
 project(libavif LANGUAGES C VERSION 1.0.4)
 
@@ -104,6 +115,9 @@ option(AVIF_LOCAL_GTEST
 )
 option(AVIF_LOCAL_FUZZTEST
        "Build the Google FuzzTest framework by providing your own copy of the repo in ext/fuzztest (see Local Builds in README)"
+       OFF
+)
+option(AVIF_LOCAL_LIBARGPARSE "Build libargparse locally as part of the CMake build process. Required to build avifgainmap util"
        OFF
 )
 
@@ -716,8 +730,8 @@ if(AVIF_BUILD_APPS)
         )
     endif()
     if(AVIF_ENABLE_EXPERIMENTAL_GAIN_MAP)
-        include(LocalLibargparse)
-        if(TARGET libargparse)
+        if(AVIF_LOCAL_LIBARGPARSE)
+            include(LocalLibargparse)
             set(AVIF_ENABLE_AVIFGAINMAPUTIL TRUE)
 
             set(AVIFGAINMAPUTIL_SRCS
@@ -743,6 +757,8 @@ if(AVIF_BUILD_APPS)
             target_include_directories(avifgainmaputil PRIVATE apps/avifgainmaputil/)
             target_link_libraries(avifgainmaputil libargparse avif_apps)
             # Don't add avifgainmaputil to installed apps for now.
+        else()
+            message(WARNING "AVIF_LOCAL_LIBARGPARSE is not enabled, not building avifgainmaputil")
         endif()
     endif()
 endif()

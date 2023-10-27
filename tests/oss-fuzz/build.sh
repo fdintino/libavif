@@ -43,14 +43,11 @@ export ORIG_CXXFLAGS="$CXXFLAGS"
 export CFLAGS=""
 export CXXFLAGS=""
 
-cd ext && bash dav1d.cmd && bash libyuv.cmd && cd ..
+# fuzz flags are problematic with meson (hence no dav1d) and no point in fuzzing fuzztest.
+cd ext && bash fuzztest.cmd && cd ..
 
 export CFLAGS=$ORIG_CFLAGS
 export CXXFLAGS=$ORIG_CXXFLAGS
-
-# Prepare remaining dependencies.
-cd ext && bash aom.cmd && bash fuzztest.cmd && bash libjpeg.cmd && bash libsharpyuv.cmd &&
-      bash zlibpng.cmd && cd ..
 
 # build libavif
 mkdir build
@@ -74,8 +71,7 @@ ninja
 # build decode fuzzer
 $CXX $CXXFLAGS -std=c++11 -I../include \
     ../tests/oss-fuzz/avif_decode_fuzzer.cc -o $OUT/avif_decode_fuzzer \
-    $LIB_FUZZING_ENGINE libavif.a ../ext/dav1d/build/src/libdav1d.a \
-    ../ext/libyuv/build/libyuv.a ../ext/aom/build.libavif/libaom.a
+    $LIB_FUZZING_ENGINE libavif.a
 
 # Restrict fuzztest tests to the only compatible fuzz engine: libfuzzer.
 if [ "$FUZZING_ENGINE" == "libfuzzer" ]

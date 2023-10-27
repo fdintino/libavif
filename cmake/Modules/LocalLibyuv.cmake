@@ -1,22 +1,32 @@
-set(AVIF_LIBYUV_BUILD_DIR "${AVIF_SOURCE_DIR}/ext/libyuv/build")
-
-# If ${ANDROID_ABI} is set, look for the library under that subdirectory.
-if(DEFINED ANDROID_ABI)
-    set(AVIF_LIBYUV_BUILD_DIR "${AVIF_LIBYUV_BUILD_DIR}/${ANDROID_ABI}")
+if(NOT DEFINED AVIF_LOCAL_LIBYUV_REPO)
+    set(AVIF_LOCAL_LIBYUV_REPO "https://chromium.googlesource.com/libyuv/libyuv")
 endif()
-set(LIB_FILENAME "${AVIF_LIBYUV_BUILD_DIR}/${AVIF_LIBRARY_PREFIX}yuv${CMAKE_STATIC_LIBRARY_SUFFIX}")
-
-if(NOT EXISTS "${LIB_FILENAME}")
-    message(FATAL_ERROR "libavif(AVIF_LIBYUV=LOCAL): ${LIB_FILENAME} is missing, bailing out")
+if(NOT DEFINED AVIF_LOCAL_LIBYUV_TAG)
+    set(AVIF_LOCAL_LIBYUV_TAG "464c51a0353c71f08fe45f683d6a97a638d47833")
 endif()
 
-message(STATUS "libavif: local libyuv found; libyuv-based fast paths enabled.")
+set(LIBYUV_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/ext/libyuv")
+if(ANDROID_ABI)
+    set(LIBYUV_BINARY_DIR "${LIBYUV_BINARY_DIR}/${ANDROID_ABI}")
+endif()
+FetchContent_Declare(
+    libyuv
+    GIT_REPOSITORY "${AVIF_LOCAL_LIBYUV_REPO}"
+    SOURCE_DIR "${AVIF_SOURCE_DIR}/ext/libyuv" BINARY_DIR "${LIBYUV_BINARY_DIR}"
+    GIT_TAG "${AVIF_LOCAL_LIBYUV_TAG}"
+    UPDATE_COMMAND ""
+)
+
+avif_fetchcontent_populate_cmake(libyuv)
+
+set_property(TARGET yuv PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_target_properties(yuv PROPERTIES AVIF_LOCAL ON FOLDER "ext/libyuv")
+
+add_library(yuv::yuv ALIAS yuv)
 
 set(LIBYUV_INCLUDE_DIR "${AVIF_SOURCE_DIR}/ext/libyuv/include")
 
-add_library(yuv::yuv STATIC IMPORTED GLOBAL)
-set_target_properties(yuv::yuv PROPERTIES IMPORTED_LOCATION "${LIB_FILENAME}" AVIF_LOCAL ON)
-target_include_directories(yuv::yuv INTERFACE "${LIBYUV_INCLUDE_DIR}")
+target_include_directories(yuv INTERFACE ${LIBYUV_INCLUDE_DIR})
 
 set(libyuv_FOUND ON)
 

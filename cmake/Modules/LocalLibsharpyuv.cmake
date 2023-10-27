@@ -1,10 +1,37 @@
-set(LIB_FILENAME "${CMAKE_CURRENT_SOURCE_DIR}/ext/libwebp/build/libsharpyuv${CMAKE_STATIC_LIBRARY_SUFFIX}")
-if(NOT EXISTS "${LIB_FILENAME}")
-    message(FATAL_ERROR "libavif(AVIF_LIBSHARPYUV=LOCAL): ${LIB_FILENAME} is missing, bailing out")
+set(AVIF_LOCAL_LIBSHARPYUV_GIT_TAG v1.3.2)
+
+set(WEBP_BUILD_ANIM_UTILS OFF CACHE BOOL "")
+set(WEBP_BUILD_CWEBP OFF CACHE BOOL "")
+set(WEBP_BUILD_DWEBP OFF CACHE BOOL "")
+set(WEBP_BUILD_GIF2WEBP OFF CACHE BOOL "")
+set(WEBP_BUILD_IMG2WEBP OFF CACHE BOOL "")
+set(WEBP_BUILD_VWEBP OFF CACHE BOOL "")
+set(WEBP_BUILD_WEBPINFO OFF CACHE BOOL "")
+set(WEBP_BUILD_LIBWEBPMUX OFF CACHE BOOL "")
+set(WEBP_BUILD_WEBPMUX OFF CACHE BOOL "")
+set(WEBP_BUILD_EXTRAS OFF CACHE BOOL "")
+
+set(LIBSHARPYUV_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/ext/libwebp")
+if(ANDROID_ABI)
+    set(LIBSHARPYUV_BINARY_DIR "${LIBSHARPYUV_BINARY_DIR}/${ANDROID_ABI}")
 endif()
+FetchContent_Declare(
+    libwebp
+    GIT_REPOSITORY "https://chromium.googlesource.com/webm/libwebp"
+    SOURCE_DIR "${AVIF_SOURCE_DIR}/ext/libwebp" BINARY_DIR "${LIBSHARPYUV_BINARY_DIR}"
+    GIT_TAG "${AVIF_LOCAL_LIBSHARPYUV_GIT_TAG}"
+    GIT_SHALLOW ON
+    UPDATE_COMMAND ""
+)
 
-add_library(sharpyuv::sharpyuv STATIC IMPORTED GLOBAL)
-set_target_properties(sharpyuv::sharpyuv PROPERTIES IMPORTED_LOCATION "${LIB_FILENAME}" AVIF_LOCAL ON)
-target_include_directories(sharpyuv::sharpyuv INTERFACE "${AVIF_SOURCE_DIR}/ext/libwebp")
+avif_fetchcontent_populate_cmake(libwebp)
 
-set(libsharpyuv_FOUND ON)
+set_property(TARGET sharpyuv PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET sharpyuv PROPERTY AVIF_LOCAL ON)
+set_property(TARGET sharpyuv PROPERTY FOLDER "ext/libwebp")
+
+target_include_directories(
+    sharpyuv INTERFACE $<BUILD_INTERFACE:${AVIF_SOURCE_DIR}/ext/libwebp> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDE_DIR}>
+)
+
+add_library(sharpyuv::sharpyuv ALIAS sharpyuv)
