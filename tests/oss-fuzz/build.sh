@@ -39,7 +39,7 @@
 ln -s $SRC/fuzztest $SRC/libavif/ext/fuzztest
 
 # build dependencies
-cd ext && bash aom.cmd && bash dav1d.cmd && bash googletest.cmd && bash libjpeg.cmd && \
+cd ext && bash aom.cmd && bash googletest.cmd && bash libjpeg.cmd && \
       bash libsharpyuv.cmd && bash libyuv.cmd && bash zlibpng.cmd && cd ..
 
 # build libavif

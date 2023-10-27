@@ -53,10 +53,6 @@ jobs:
       if: steps.cache-ext.outputs.cache-hit != 'true'
       working-directory: ./ext
       run: bash -e avm.cmd
-    - name: Build dav1d
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      run: bash -e dav1d.cmd
     - name: Build rav1e
       if: steps.cache-ext.outputs.cache-hit != 'true'
       working-directory: ./ext

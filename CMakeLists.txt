@@ -11,6 +11,9 @@ endif()
 # Specify search path for CMake modules to be loaded by include() and find_package()
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
+include(ExternalProject)
+include(FindPkgConfig)
+
 project(libavif LANGUAGES C VERSION 1.0.1)
 
 # Set C99 as the default
@@ -441,40 +444,15 @@ if(AVIF_CODEC_DAV1D)
     set(AVIF_CODEC_DEFINITIONS ${AVIF_CODEC_DEFINITIONS} -DAVIF_CODEC_DAV1D=1)
     set(AVIF_SRCS ${AVIF_SRCS} src/codec_dav1d.c)
 
-    if(AVIF_LOCAL_DAV1D)
-        set(AVIF_DAV1D_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ext/dav1d/build")
-        # If ${ANDROID_ABI} is set, look for the library under that subdirectory.
-        if(DEFINED ANDROID_ABI)
-            set(AVIF_DAV1D_BUILD_DIR "${AVIF_DAV1D_BUILD_DIR}/${ANDROID_ABI}")
-        endif()
-        set(LIB_FILENAME "${AVIF_DAV1D_BUILD_DIR}/src/libdav1d${CMAKE_STATIC_LIBRARY_SUFFIX}")
-        if(NOT EXISTS "${LIB_FILENAME}")
-            if("${CMAKE_STATIC_LIBRARY_SUFFIX}" STREQUAL ".a")
-                message(FATAL_ERROR "libavif: ${LIB_FILENAME} is missing, bailing out")
-            else()
-                # On windows, meson will produce a libdav1d.a instead of the expected libdav1d.dll/.lib.
-                # See https://github.com/mesonbuild/meson/issues/8153.
-                set(LIB_FILENAME "${CMAKE_CURRENT_SOURCE_DIR}/ext/dav1d/build/src/libdav1d.a")
-                if(NOT EXISTS "${LIB_FILENAME}")
-                    message(
-                        FATAL_ERROR "libavif: ${LIB_FILENAME} (or libdav1d${CMAKE_STATIC_LIBRARY_SUFFIX}) is missing, bailing out"
-                    )
-                endif()
-            endif()
-        endif()
-
-        set(AVIF_CODEC_INCLUDES ${AVIF_CODEC_INCLUDES} "${AVIF_DAV1D_BUILD_DIR}" "${AVIF_DAV1D_BUILD_DIR}/include"
-                                "${AVIF_DAV1D_BUILD_DIR}/include/dav1d" "${CMAKE_CURRENT_SOURCE_DIR}/ext/dav1d/include"
-        )
-        set(AVIF_CODEC_LIBRARIES ${AVIF_CODEC_LIBRARIES} ${LIB_FILENAME})
-    else()
-        # Check to see if dav1d is independently being built by the outer CMake project
-        if(NOT TARGET dav1d)
-            find_package_libavif(dav1d REQUIRED)
-            set(AVIF_CODEC_SYSTEM_INCLUDES ${AVIF_CODEC_SYSTEM_INCLUDES} ${DAV1D_INCLUDE_DIR})
-        endif()
-        set(AVIF_CODEC_LIBRARIES ${AVIF_CODEC_LIBRARIES} ${DAV1D_LIBRARY})
+    # Check to see if dav1d is independently being built by the outer CMake project
+    if(NOT TARGET dav1d)
+        find_package_libavif(dav1d REQUIRED)
+        set(AVIF_CODEC_SYSTEM_INCLUDES ${AVIF_CODEC_SYSTEM_INCLUDES} ${DAV1D_INCLUDE_DIR})
+        set(AVIF_LINK_DIRS ${AVIF_LINK_DIRS} ${DAV1D_LIBRARY_DIRS})
     endif()
+    set(AVIF_CODEC_LIBRARIES ${AVIF_CODEC_LIBRARIES} ${DAV1D_LIBRARY})
+
+    list(APPEND AVIF_PKG_CONFIG_REQUIRES dav1d)
 
     if(UNIX AND NOT APPLE)
         set(AVIF_PLATFORM_LIBRARIES ${AVIF_PLATFORM_LIBRARIES} ${CMAKE_DL_LIBS}) # for dlsym

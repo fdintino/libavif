@@ -16,6 +16,7 @@
 /ext/rav1e
 /ext/SVT-AV1
 /ext/zlib
+/ext/build
 .clangd/
 cscope.*
 tags
