@@ -20,6 +20,11 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
+    env:
+      RUSTC_WRAPPER: sccache
+      SCCACHE_CACHE_SIZE: 200M
+      SCCACHE_DIR: ${{ github.workspace }}/sccache/
+      SCCACHE_IDLE_TIMEOUT: 0
 
     steps:
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
@@ -34,7 +39,25 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ext
-        key: ${{ runner.os }}-golden-tests-${{ hashFiles('ext/aom.cmd', 'ext/libyuv.cmd', 'ext/libxml2.cmd', 'ext/mp4box.sh') }}
+        key: ${{ runner.os }}-golden-tests-${{ hashFiles('ext/mp4box.sh') }}
+
+    - name: Install sccache
+      env:
+        PLATFORM: ${{ runner.os == 'macOS' && 'apple-darwin' || 'unknown-linux-musl' }}
+        VERSION: 0.7.0
+      run: |
+        curl -L https://github.com/mozilla/sccache/releases/download/v$VERSION/sccache-v$VERSION-x86_64-$PLATFORM.tar.gz | tar xz
+        echo "$(pwd)/sccache-v$VERSION-x86_64-$PLATFORM" >> $GITHUB_PATH
+
+    - name: Cache sccache results
+      uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+      with:
+        path: ${{ env.SCCACHE_DIR }}
+        key: sccache-${{ runner.os }}-linux-golden-${{ github.sha }}
+        restore-keys: |
+          sccache-${{ runner.os }}-linux-golden-
+          sccache-${{ runner.os }}-
+
     - name: Setup cmake
       uses: jwlawson/actions-setup-cmake@187efd9581ed20ee4e03c0dfb9ac2cd5896c4835
       with:
@@ -46,18 +69,6 @@ jobs:
       with:
         version: 2.15.05
     - uses: seanmiddleditch/gha-setup-ninja@v4
-    - name: Build aom
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      run: bash -e aom.cmd
-    - name: Build libyuv
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      run: bash -e libyuv.cmd
-    - name: Build libxml2
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      run: bash -e libxml2.cmd
     - name: Build mp4box
       if: steps.cache-ext.outputs.cache-hit != 'true'
       working-directory: ./ext
@@ -76,6 +87,7 @@ jobs:
         -DAVIF_LOCAL_LIBXML2=ON
         -DAVIF_BUILD_TESTS=ON -DAVIF_ENABLE_GOLDEN_TESTS=ON
         -DAVIF_ENABLE_GTEST=OFF
+        -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
         -DGOLDEN_TESTS_OUTPUT_DIR=${{ runner.temp	}}/golden_tests
     - name: Build libavif (ninja)
       working-directory: ./build

@@ -1,0 +1,67 @@
+set(BUILD_SHARED_LIBS_ORIG ${BUILD_SHARED_LIBS})
+set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
+set(CMAKE_BUILD_TYPE_ORIG ${CMAKE_BUILD_TYPE})
+set(CMAKE_BUILD_TYPE Release CACHE INTERNAL "")
+
+set(SVT_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/ext/SVT-AV1")
+if(ANDROID_ABI)
+    set(SVT_BINARY_DIR "${SVT_BINARY_DIR}/${ANDROID_ABI}")
+endif()
+
+FetchContent_Declare(
+    svt
+    GIT_REPOSITORY "https://gitlab.com/AOMediaCodec/SVT-AV1.git"
+    SOURCE_DIR "${AVIF_SOURCE_DIR}/ext/SVT-AV1" BINARY_DIR "${SVT_BINARY_DIR}"
+    GIT_TAG "v1.7.0"
+    UPDATE_COMMAND ""
+    GIT_SHALLOW ON
+)
+
+set(BUILD_DEC OFF CACHE BOOL "")
+set(BUILD_APPS OFF CACHE BOOL "")
+
+if(NOT svt_POPULATED)
+    FetchContent_Populate(svt)
+    enable_language(C CXX ASM ASM_NASM)
+    add_subdirectory(${svt_SOURCE_DIR} ${svt_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
+
+set(SVT_INCLUDE_DIR ${svt_BINARY_DIR}/include)
+file(MAKE_DIRECTORY ${SVT_INCLUDE_DIR}/svt-av1)
+
+file(GLOB _svt_header_files ${svt_SOURCE_DIR}/Source/API/*.h)
+
+set(_svt_header_byproducts)
+
+foreach(_svt_header_file ${_svt_header_files})
+    get_filename_component(_svt_header_name "${_svt_header_file}" NAME)
+    set(_svt_header_output ${SVT_INCLUDE_DIR}/svt-av1/${_svt_header_name})
+    add_custom_command(
+        OUTPUT ${_svt_header_output}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${_svt_header_file} ${_svt_header_output}
+        DEPENDS ${_svt_header_file}
+        VERBATIM
+    )
+    list(APPEND _svt_header_byproducts ${_svt_header_output})
+endforeach()
+
+add_custom_target(_svt_install_headers DEPENDS ${_svt_header_byproducts})
+add_dependencies(SvtAv1Enc _svt_install_headers)
+set_target_properties(SvtAv1Enc PROPERTIES AVIF_LOCAL ON)
+
+target_include_directories(SvtAv1Enc INTERFACE ${SVT_INCLUDE_DIR})
+
+set(SVT_LIBRARY SvtAv1Enc)
+set(SVT_LIBRARIES ${SVT_LIBRARY})
+set(SVT_FOUND ON CACHE BOOL "")
+
+set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_ORIG} CACHE BOOL "" FORCE)
+set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE_ORIG} CACHE STRING "" FORCE)
+
+if(NOT CMAKE_ASM_NASM_COMPILE_OBJECT)
+    enable_language(ASM_NASM)
+    if(NOT CMAKE_ASM_NASM_COMPILE_OBJECT)
+        set(CMAKE_ASM_NASM_COMPILE_OBJECT "<CMAKE_ASM_NASM_COMPILER> <INCLUDES> <FLAGS> -o <OBJECT> <SOURCE>")
+    endif()
+endif()
+

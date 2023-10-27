@@ -20,24 +20,60 @@
 find_package(PkgConfig QUIET)
 if(PKG_CONFIG_FOUND)
     pkg_check_modules(_DAV1D dav1d)
+    if(_DAV1D_FOUND)
+        list(APPEND AVIF_PKG_CONFIG_REQUIRES dav1d)
+        if(BUILD_SHARED_LIBS)
+            set(_PC_TYPE)
+        else()
+            set(_PC_TYPE _STATIC)
+        endif()
+        set(DAV1D_LIBRARY_DIRS ${_DAV1D${_PC_TYPE}_LIBRARY_DIRS})
+        set(DAV1D_LIBRARIES ${_DAV1D${_PC_TYPE}_LIBRARIES})
+    endif()
 endif(PKG_CONFIG_FOUND)
 
-find_path(DAV1D_INCLUDE_DIR NAMES dav1d/dav1d.h PATHS ${_DAV1D_INCLUDEDIR})
+find_library(DAV1D_LIBRARY NAMES dav1d libdav1d HINTS ${DAV1D_LIBRARY_DIRS} NO_CACHE)
 
-find_library(DAV1D_LIBRARY NAMES dav1d PATHS ${_DAV1D_LIBDIR})
+find_path(DAV1D_INCLUDE_DIR NAMES dav1d/dav1d.h HINTS ${_DAV1D_INCLUDE_DIRS} NO_CACHE)
 
-if(DAV1D_LIBRARY)
-    set(DAV1D_LIBRARIES ${DAV1D_LIBRARIES} ${DAV1D_LIBRARY})
-endif(DAV1D_LIBRARY)
+set(DAV1D_VERSION ${_DAV1D_VERSION})
+
+# Remove -ldav1d since it will be replaced with full dav1d library path
+if(DAV1D_LIBRARIES)
+    list(REMOVE_ITEM DAV1D_LIBRARIES "dav1d")
+endif()
+set(DAV1D_LIBRARIES ${DAV1D_LIBRARY} ${DAV1D_LIBRARIES})
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(
     dav1d
     FOUND_VAR DAV1D_FOUND
     REQUIRED_VARS DAV1D_LIBRARY DAV1D_LIBRARIES DAV1D_INCLUDE_DIR
-    VERSION_VAR _DAV1D_VERSION
+    VERSION_VAR DAV1D_VERSION
 )
 
 # show the DAV1D_INCLUDE_DIR, DAV1D_LIBRARY and DAV1D_LIBRARIES variables only
 # in the advanced view
 mark_as_advanced(DAV1D_INCLUDE_DIR DAV1D_LIBRARY DAV1D_LIBRARIES)
+
+if(DAV1D_LIBRARY)
+    set(DAV1D_FOUND ON)
+    if("${DAV1D_LIBRARY}" MATCHES "\\.a$")
+        add_library(dav1d::dav1d STATIC IMPORTED GLOBAL)
+    else()
+        add_library(dav1d::dav1d SHARED IMPORTED GLOBAL)
+    endif()
+    set_target_properties(
+        dav1d::dav1d PROPERTIES IMPORTED_LOCATION "${DAV1D_LIBRARY}" INTERFACE_INCLUDE_DIRECTORIES "${DAV1D_INCLUDE_DIR}"
+    )
+    target_include_directories(dav1d::dav1d INTERFACE ${DAV1D_INCLUDE_DIR})
+
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(dav1d::dav1d INTERFACE ${CMAKE_DL_LIBS}) # for dlsym
+    endif()
+
+    if(TARGET dav1d)
+        add_dependencies(dav1d::dav1d dav1d)
+    endif()
+    set(DAV1D_LIBRARY dav1d::dav1d)
+endif()

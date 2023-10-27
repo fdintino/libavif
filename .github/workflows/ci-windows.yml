@@ -28,6 +28,10 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest]
+    env:
+      RUSTC_WRAPPER: sccache
+      SCCACHE_CACHE_SIZE: 400M
+      SCCACHE_DIR: C:\sccache
 
     steps:
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
@@ -43,12 +47,28 @@ jobs:
         toolchain: stable
         override: true
 
-    - name: Cache external dependencies
-      id: cache-ext
-      uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+    - name: Install cargo-c
+      run: |
+        $LINK = "https://github.com/lu-zero/cargo-c/releases/latest/download"
+        $CARGO_C_FILE = "cargo-c-windows-msvc"
+        curl -LO "$LINK/$CARGO_C_FILE.zip"
+        7z e -y "$CARGO_C_FILE.zip" -o"${env:USERPROFILE}\.cargo\bin"
+
+    - name: Install sccache
+      run: |
+        $LINK = "https://github.com/mozilla/sccache/releases/download/v0.7.0"
+        $SCCACHE_FILE = "sccache-v0.7.0-x86_64-pc-windows-msvc"
+        curl -LO "$LINK/$SCCACHE_FILE.tar.gz"
+        tar xzf "$SCCACHE_FILE.tar.gz"
+        echo "$Env:GITHUB_WORKSPACE/$SCCACHE_FILE" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+    - name: Cache sccache results
+      uses: pat-s/always-upload-cache@v3.0.11
+      continue-on-error: true
       with:
-        path: ext
-        key: ${{ runner.os }}-${{ hashFiles('ext/*.cmd') }}
+        path: ${{ env.SCCACHE_DIR }}
+        key: sccache-${{ runner.os }}-${{ github.sha }}
+        restore-keys: |
+          sccache-${{ runner.os }}-
     - name: Print cmake version
       run: cmake --version
     - uses: ilammy/setup-nasm@321e6ed62a1fc77024a3bd853deb33645e8b22c4 # v1.4.0
@@ -58,46 +78,6 @@ jobs:
     - run: pip install meson
     - name: Print ImageMagick version
       run: magick --version
-    - name: Build aom
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      run: ./aom.cmd
-    - name: Build dav1d
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      run: ./dav1d.cmd
-    - name: Build rav1e
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      run: ./rav1e.cmd
-    - name: Build SVT-AV1
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      run: ./svt.cmd
-    - name: Build libgav1
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      run: ./libgav1.cmd
-    - name: Build libyuv
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      run: ./libyuv.cmd
-    - name: Build libjpeg
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      run: ./libjpeg.cmd
-    - name: Build libsharpyuv
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      run: ./libsharpyuv.cmd
-    - name: Build zlib and libpng
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      run: ./zlibpng.cmd
-    - name: Build GoogleTest
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      run: ./googletest.cmd
 
     - name: Prepare libavif (cmake)
       run: >
@@ -118,6 +98,7 @@ jobs:
         -DAVIF_ENABLE_EXPERIMENTAL_YCGCO_R=ON
         -DAVIF_ENABLE_EXPERIMENTAL_GAIN_MAP=ON
         -DAVIF_ENABLE_EXPERIMENTAL_AVIR=ON
+        -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
     - name: Build libavif (ninja)
       working-directory: ./build
       run: ninja
@@ -140,6 +121,7 @@ jobs:
         build\ext\libpng\libpng16_static.lib
         build\ext\zlib\zlibstatic.lib
         build\avif.lib
+        ntdll.lib
         /out:avifenc.exe
 
         .\avifenc.exe --help

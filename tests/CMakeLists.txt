@@ -9,10 +9,10 @@ enable_testing()
 # C tests and tools
 
 add_executable(aviftest aviftest.c)
-if(AVIF_LOCAL_LIBGAV1)
+if(AVIF_CODEC_LIBGAV1)
     set_target_properties(aviftest PROPERTIES LINKER_LANGUAGE "CXX")
 endif()
-target_link_libraries(aviftest avif ${AVIF_PLATFORM_LIBRARIES})
+target_link_libraries(aviftest avif_dep)
 add_test(NAME aviftest COMMAND aviftest ${CMAKE_CURRENT_SOURCE_DIR}/data)
 
 if(AVIF_ENABLE_COVERAGE)
@@ -31,10 +31,11 @@ if(AVIF_ENABLE_COVERAGE)
 endif()
 
 add_executable(avifyuv avifyuv.c)
-if(AVIF_LOCAL_LIBGAV1)
+if(AVIF_CODEC_LIBGAV1)
     set_target_properties(avifyuv PROPERTIES LINKER_LANGUAGE "CXX")
 endif()
-target_link_libraries(avifyuv avif ${AVIF_PLATFORM_LIBRARIES})
+
+target_link_libraries(avifyuv avif_dep)
 foreach(AVIFYUV_MODE limited rgb) # Modes drift and premultiply take more than 2 minutes each so they are disabled.
     add_test(NAME avifyuv_${AVIFYUV_MODE} COMMAND avifyuv -m ${AVIFYUV_MODE})
 endforeach()
@@ -48,10 +49,10 @@ endif()
 
 # Fuzz target without any fuzzing engine dependency. For easy reproduction of oss-fuzz issues.
 add_executable(repro_avif_decode_fuzzer oss-fuzz/avif_decode_fuzzer.cc oss-fuzz/repro_fuzz.cc)
-if(AVIF_LOCAL_LIBGAV1)
+if(AVIF_CODEC_LIBGAV1)
     set_target_properties(repro_avif_decode_fuzzer PROPERTIES LINKER_LANGUAGE "CXX")
 endif()
-target_link_libraries(repro_avif_decode_fuzzer avif ${AVIF_PLATFORM_LIBRARIES})
+target_link_libraries(repro_avif_decode_fuzzer avif_dep)
 # The test below exists for coverage and as a usage example: repro_avif_decode_fuzzer [reproducer file path]
 add_test(NAME repro_avif_decode_fuzzer COMMAND repro_avif_decode_fuzzer
                                                ${CMAKE_CURRENT_SOURCE_DIR}/data/color_grid_alpha_nogrid.avif
@@ -64,43 +65,25 @@ add_test(NAME repro_avif_decode_fuzzer COMMAND repro_avif_decode_fuzzer
 # are considered as extra linked libraries.
 macro(add_avif_gtest TEST_NAME)
     add_executable(${TEST_NAME} gtest/${TEST_NAME}.cc)
-    target_include_directories(${TEST_NAME} PRIVATE ${GTEST_INCLUDE_DIRS})
-    target_link_libraries(${TEST_NAME} PRIVATE aviftest_helpers ${GTEST_BOTH_LIBRARIES} ${ARGN})
+    target_link_libraries(${TEST_NAME} PRIVATE aviftest_helpers GTest::gtest GTest::gtest_main ${ARGN})
     add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
 endmacro()
 macro(add_avif_gtest_with_data TEST_NAME)
     add_executable(${TEST_NAME} gtest/${TEST_NAME}.cc)
-    target_include_directories(${TEST_NAME} PRIVATE ${GTEST_INCLUDE_DIRS})
-    target_link_libraries(${TEST_NAME} PRIVATE aviftest_helpers ${GTEST_LIBRARIES} ${ARGN})
+    target_link_libraries(${TEST_NAME} PRIVATE aviftest_helpers GTest::gtest ${ARGN})
     add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/data/)
 endmacro()
 
 if(AVIF_ENABLE_GTEST OR AVIF_ENABLE_FUZZTEST)
     if(AVIF_LOCAL_GTEST)
-        set(GTEST_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/ext/googletest/googletest/include)
-        set(GTEST_LIBRARIES
-            ${CMAKE_SOURCE_DIR}/ext/googletest/build/lib/${AVIF_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX}
-        )
-        set(GTEST_MAIN_LIBRARIES
-            ${CMAKE_SOURCE_DIR}/ext/googletest/build/lib/${AVIF_LIBRARY_PREFIX}gtest_main${CMAKE_STATIC_LIBRARY_SUFFIX}
-        )
-        set(GTEST_BOTH_LIBRARIES ${GTEST_LIBRARIES} ${GTEST_MAIN_LIBRARIES})
-        if(NOT EXISTS ${GTEST_INCLUDE_DIRS}/gtest/gtest.h)
-            message(FATAL_ERROR "googletest(AVIF_LOCAL_GTEST): ${GTEST_INCLUDE_DIRS}/gtest/gtest.h is missing, bailing out")
-        elseif(NOT EXISTS ${GTEST_LIBRARIES})
-            message(FATAL_ERROR "googletest(AVIF_LOCAL_GTEST): ${GTEST_LIBRARIES} is missing, bailing out")
-        elseif(NOT EXISTS ${GTEST_MAIN_LIBRARIES})
-            message(FATAL_ERROR "googletest(AVIF_LOCAL_GTEST): ${GTEST_MAIN_LIBRARIES} is missing, bailing out")
-        else()
-            message(STATUS "Found local ext/googletest")
-        endif()
+        include(LocalGoogletest)
+        message(STATUS "Found local ext/googletest")
     else()
         find_package(GTest REQUIRED)
     endif()
 
     add_library(avifincrtest_helpers OBJECT gtest/avifincrtest_helpers.cc)
-    target_link_libraries(avifincrtest_helpers avif ${AVIF_PLATFORM_LIBRARIES} ${GTEST_LIBRARIES})
-    target_include_directories(avifincrtest_helpers PUBLIC ${GTEST_INCLUDE_DIRS})
+    target_link_libraries(avifincrtest_helpers avif_dep GTest::gtest)
 endif()
 
 if(AVIF_ENABLE_GTEST)
@@ -178,7 +161,6 @@ if(AVIF_ENABLE_FUZZTEST)
     # are considered as extra linked libraries.
     macro(add_avif_fuzztest TEST_NAME)
         add_executable(${TEST_NAME} gtest/${TEST_NAME}.cc gtest/avif_fuzztest_helpers.cc)
-        target_include_directories(${TEST_NAME} PRIVATE ${GTEST_INCLUDE_DIRS})
         target_link_libraries(${TEST_NAME} PRIVATE aviftest_helpers ${ARGN})
         link_fuzztest(${TEST_NAME})
         add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})

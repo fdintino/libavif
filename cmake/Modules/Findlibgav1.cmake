@@ -41,3 +41,14 @@ find_package_handle_standard_args(
 # show the LIBGAV1_INCLUDE_DIR, LIBGAV1_LIBRARY and LIBGAV1_LIBRARIES variables
 # only in the advanced view
 mark_as_advanced(LIBGAV1_INCLUDE_DIR LIBGAV1_LIBRARY LIBGAV1_LIBRARIES)
+
+if(LIBGAV1_FOUND)
+    if(NOT LIBGAV1_INCLUDE_DIRS)
+        set(LIBGAV1_INCLUDE_DIRS ${LIBGAV1_INCLUDE_DIR})
+    endif()
+    add_library(libgav1_static STATIC IMPORTED GLOBAL)
+    set_target_properties(libgav1_static PROPERTIES IMPORTED_LOCATION "${LIBGAV1_LIBRARY}")
+    target_include_directories(libgav1_static ${LIBGAV1_INCLUDE_DIR})
+    add_library(libgav1::libgav1 ALIAS libgav1_static)
+    set(LIBGAV1_LIBRARY libgav1::libgav1)
+endif()

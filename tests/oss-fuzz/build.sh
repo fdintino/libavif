@@ -19,9 +19,6 @@
 # https://github.com/google/oss-fuzz/blob/master/projects/libavif/build.sh
 # It builds the different fuzz targets.
 
-# build dependencies
-cd ext && bash dav1d.cmd && bash libyuv.cmd && cd ..
-
 # build libavif
 mkdir build
 cd build
