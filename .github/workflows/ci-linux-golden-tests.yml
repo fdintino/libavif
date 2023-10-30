@@ -50,10 +50,6 @@ jobs:
       if: steps.cache-ext.outputs.cache-hit != 'true'
       working-directory: ./ext
       run: bash -e aom.cmd
-    - name: Build libyuv
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      run: bash -e libyuv.cmd
     - name: Build libxml2
       if: steps.cache-ext.outputs.cache-hit != 'true'
       working-directory: ./ext

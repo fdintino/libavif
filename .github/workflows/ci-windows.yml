@@ -74,10 +74,6 @@ jobs:
       if: steps.cache-ext.outputs.cache-hit != 'true'
       working-directory: ./ext
       run: ./libgav1.cmd
-    - name: Build libyuv
-      if: steps.cache-ext.outputs.cache-hit != 'true'
-      working-directory: ./ext
-      run: ./libyuv.cmd
     - name: Build libjpeg
       if: steps.cache-ext.outputs.cache-hit != 'true'
       working-directory: ./ext
