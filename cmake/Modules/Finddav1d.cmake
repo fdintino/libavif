@@ -17,39 +17,37 @@
 #  See the License for more information.
 #=============================================================================
 #
-set(AVIF_EXT_DIR ${PROJECT_SOURCE_DIR}/ext)
-set(AVIF_EXT_INSTALL_PREFIX ${AVIF_EXT_DIR}/build)
 
 function(avif_build_local_dav1d)
+    set(AVIF_EXT_INSTALL_PREFIX "${PROJECT_SOURCE_DIR}/ext/build")
+
     set(AVIF_LOCAL_DAV1D_TAG "1.2.1")
     set(DAV1D_FOUND ON PARENT_SCOPE)
 
     find_program(NINJA_EXECUTABLE NAMES ninja ninja-build REQUIRED)
     find_program(MESON_EXECUTABLE meson REQUIRED)
 
-    set(DAV1D_LIBRARY ${AVIF_EXT_INSTALL_PREFIX}/lib/libdav1d.a PARENT_SCOPE)
-    set(DAV1D_INCLUDE_DIR ${AVIF_EXT_INSTALL_PREFIX}/include PARENT_SCOPE)
-    set(DAV1D_VERSION ${AVIF_LOCAL_DAV1D_TAG} PARENT_SCOPE)
-
-    set(EP_SOURCE_DIR ${AVIF_EXT_DIR}/dav1d)
-    set(EP_BINARY_DIR "${PROJECT_SOURCE_DIR}/ext/dav1d/build")
+    set(EP_SOURCE_DIR "${PROJECT_SOURCE_DIR}/ext/dav1d")
+    set(EP_BINARY_DIR "${EP_SOURCE_DIR}/build")
 
     # Loosely based upon
     # https://github.com/BelledonneCommunications/linphone-sdk/blob/40373878e26ab10c31c7237f1a22758aac3939ab/cmake/ExternalDependencies.cmake#L360
     if(ANDROID)
-        list(APPEND CMAKE_PROGRAM_PATH "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_HOST_TAG}/bin/")
+        list(APPEND CMAKE_PROGRAM_PATH "${ANDROID_TOOLCHAIN_ROOT}/bin")
+        set(EP_BINARY_DIR "${EP_BINARY_DIR}/${ANDROID_ABI}")
+        set(AVIF_EXT_INSTALL_PREFIX "${AVIF_EXT_INSTALL_PREFIX}/${ANDROID_ABI}")
 
         if(CMAKE_SYSTEM_PROCESSOR STREQUAL "armv7-a")
-            set(ANDROID_ARCH "arm")
+            set(DAV1D_ANDROID_ARCH "arm")
         elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
-            set(ANDROID_ARCH "aarch64")
+            set(DAV1D_ANDROID_ARCH "aarch64")
         elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
-            set(ANDROID_ARCH "x86_64")
+            set(DAV1D_ANDROID_ARCH "x86_64")
         else()
-            set(ANDROID_ARCH "x86")
+            set(DAV1D_ANDROID_ARCH "x86")
         endif()
 
-        set(CROSS_FILE "${EP_SOURCE_DIR}/package/crossfiles/${ANDROID_ARCH}-android.meson")
+        set(CROSS_FILE "${EP_SOURCE_DIR}/package/crossfiles/${DAV1D_ANDROID_ARCH}-android.meson")
     elseif(APPLE)
         # If we are cross compiling generate the corresponding file to use with meson
         if(IOS OR NOT CMAKE_SYSTEM_PROCESSOR STREQUAL CMAKE_HOST_SYSTEM_PROCESSOR)
@@ -121,6 +119,10 @@ function(avif_build_local_dav1d)
         DEPENDEES download
         ALWAYS ON
     )
+
+    set(DAV1D_LIBRARY ${AVIF_EXT_INSTALL_PREFIX}/lib/libdav1d.a PARENT_SCOPE)
+    set(DAV1D_INCLUDE_DIR ${AVIF_EXT_INSTALL_PREFIX}/include PARENT_SCOPE)
+    set(DAV1D_VERSION ${AVIF_LOCAL_DAV1D_TAG} PARENT_SCOPE)
     set_target_properties(dav1d PROPERTIES FOLDER "ext/dav1d")
 endfunction()
 

@@ -27,6 +27,12 @@ set(AVIF_LOCAL_LIBYUV ON CACHE BOOL "" FORCE)
 set(AVIF_CODEC_LIBGAV1 OFF CACHE BOOL "" FORCE)
 set(AVIF_LOCAL_LIBGAV1 OFF CACHE BOOL "" FORCE)
 
+
+# Import the cpu-features module to compute the number of threads used for
+# decoding.
+include(AndroidNdkModules)
+android_ndk_import_module_cpufeatures()
+
 # The current CMake file lives in:
 # $LIBAVIF_ROOT/android_jni/avifandroidjni/src/main/jni.
 # In order to build libavif, we need to go up 5 directories. If a different
@@ -34,10 +40,5 @@ set(AVIF_LOCAL_LIBGAV1 OFF CACHE BOOL "" FORCE)
 add_subdirectory(../../../../.. build)
 
 add_library("avif_android" SHARED "libavif_jni.cc")
-
-# Import the cpu-features module to compute the number of threads used for
-# decoding.
-include(AndroidNdkModules)
-android_ndk_import_module_cpufeatures()
 
 target_link_libraries(avif_android jnigraphics avif log cpufeatures)
