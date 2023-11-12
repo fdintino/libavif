@@ -97,8 +97,6 @@ function(avif_build_local_dav1d)
 
     set(DAV1D_FOUND ON PARENT_SCOPE)
     set(DAV1D_LIBRARY dav1d::dav1d PARENT_SCOPE)
-    set(DAV1D_LIBRARY_DIRS ${install_prefix}/lib PARENT_SCOPE)
-    set(DAV1D_INCLUDE_DIR ${install_prefix}/include PARENT_SCOPE)
     set(DAV1D_VERSION ${AVIF_LOCAL_DAV1D_TAG} PARENT_SCOPE)
     set_target_properties(dav1d::dav1d PROPERTIES FOLDER "ext/dav1d")
 endfunction()

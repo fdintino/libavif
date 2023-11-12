@@ -1,5 +1,4 @@
-set(BUILD_SHARED_LIBS_ORIG ${BUILD_SHARED_LIBS})
-set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
+set(AVIF_LOCAL_LIBSHARPYUV_GIT_TAG v1.3.2)
 
 set(WEBP_BUILD_ANIM_UTILS OFF CACHE BOOL "")
 set(WEBP_BUILD_CWEBP OFF CACHE BOOL "")
@@ -20,26 +19,18 @@ FetchContent_Declare(
     libwebp
     GIT_REPOSITORY "https://chromium.googlesource.com/webm/libwebp"
     SOURCE_DIR "${AVIF_SOURCE_DIR}/ext/libwebp" BINARY_DIR "${LIBSHARPYUV_BINARY_DIR}"
-    GIT_TAG "v1.3.2"
+    GIT_TAG "${AVIF_LOCAL_LIBSHARPYUV_GIT_TAG}"
     GIT_SHALLOW ON
     UPDATE_COMMAND ""
 )
 
-if(NOT libwebp_POPULATED)
-    FetchContent_Populate(libwebp)
-    add_subdirectory(${libwebp_SOURCE_DIR} ${libwebp_BINARY_DIR} EXCLUDE_FROM_ALL)
-endif()
-
-add_library(libsharpyuv::libsharpyuv ALIAS sharpyuv)
-
-set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_ORIG} CACHE BOOL "" FORCE)
+avif_fetchcontent_populate_cmake(libwebp)
 
 set_property(TARGET sharpyuv PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET sharpyuv PROPERTY AVIF_LOCAL ON)
 
-set(LIBSHARPYUV_INCLUDE_DIR ${AVIF_SOURCE_DIR}/ext/libwebp)
 target_include_directories(
-    sharpyuv INTERFACE $<BUILD_INTERFACE:${LIBSHARPYUV_INCLUDE_DIR}> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDE_DIR}>
+    sharpyuv INTERFACE $<BUILD_INTERFACE:${AVIF_SOURCE_DIR}/ext/libwebp> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDE_DIR}>
 )
 set(libsharpyuv_FOUND ON CACHE BOOL "")
 set(LIBSHARPYUV_LIBRARY sharpyuv)

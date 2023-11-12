@@ -5,8 +5,6 @@ if(NOT DEFINED AVIF_LOCAL_LIBYUV_TAG)
     set(AVIF_LOCAL_LIBYUV_TAG "464c51a0353c71f08fe45f683d6a97a638d47833")
 endif()
 
-set(BUILD_SHARED_LIBS_ORIG ${BUILD_SHARED_LIBS})
-set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
 set(LIBYUV_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/ext/libyuv")
 if(ANDROID_ABI)
     set(LIBYUV_BINARY_DIR "${LIBYUV_BINARY_DIR}/${ANDROID_ABI}")
@@ -19,17 +17,12 @@ FetchContent_Declare(
     UPDATE_COMMAND ""
 )
 
-if(NOT libyuv_POPULATED)
-    FetchContent_Populate(libyuv)
-    add_subdirectory(${libyuv_SOURCE_DIR} ${libyuv_BINARY_DIR} EXCLUDE_FROM_ALL)
-endif()
+avif_fetchcontent_populate_cmake(libyuv)
 
 set_property(TARGET yuv PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_target_properties(yuv PROPERTIES AVIF_LOCAL ON)
 
 add_library(yuv::yuv ALIAS yuv)
-
-set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_ORIG} CACHE BOOL "" FORCE)
 
 set(LIBYUV_INCLUDE_DIR "${AVIF_SOURCE_DIR}/ext/libyuv/include")
 

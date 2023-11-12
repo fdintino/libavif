@@ -1,3 +1,6 @@
+set(AVIF_LOCAL_AOM_GIT_SHA 67d97ee720d57b71c23e500007d8c54577615b89)
+set(AVIF_LOCAL_AVM_GIT_TAG research-v5.0.0)
+
 if(AVIF_LOCAL_AVM)
     message(CHECK_START "Fetching avm")
 else()
@@ -41,7 +44,7 @@ if(AVIF_LOCAL_AVM)
         libaom
         GIT_REPOSITORY "https://gitlab.com/AOMediaCodec/avm.git"
         SOURCE_DIR "${AVIF_SOURCE_DIR}/ext/avm" BINARY_DIR "${AOM_BINARY_DIR}"
-        GIT_TAG "research-v5.0.0"
+        GIT_TAG ${AVIF_LOCAL_AVM_GIT_TAG}
         GIT_PROGRESS ON
         GIT_SHALLOW ON
         UPDATE_COMMAND ""
@@ -55,13 +58,11 @@ else()
         )
     endif()
     FetchContent_Declare(
-        libaom URL "https://aomedia.googlesource.com/aom/+archive/67d97ee720d57b71c23e500007d8c54577615b89.tar.gz" SOURCE_DIR
+        libaom URL "https://aomedia.googlesource.com/aom/+archive/${AVIF_LOCAL_AOM_GIT_SHA}.tar.gz" SOURCE_DIR
                    "${AVIF_SOURCE_DIR}/ext/aom" BINARY_DIR "${AOM_BINARY_DIR}" UPDATE_COMMAND "" ${AOM_PATCH_COMMAND}
     )
 endif()
 
-set(BUILD_SHARED_LIBS_ORIG ${BUILD_SHARED_LIBS})
-set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
 set(CONFIG_PIC 1 CACHE INTERNAL "")
 if(libyuv_FOUND)
     set(CONFIG_LIBYUV 0 CACHE INTERNAL "")
@@ -81,28 +82,27 @@ if(CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
     set(AOM_TARGET_CPU "arm64")
 endif()
 
-# See comment above for avif_set_aom_compile_options
-foreach(_aom_config_setting CMAKE_C_FLAGS CMAKE_CXX_FLAGS CMAKE_EXE_LINKER_FLAGS)
-    foreach(_aom_config_type DEBUG RELEASE MINSIZEREL RELWITHDEBINFO)
-        set(${_aom_config_setting}_${_aom_config_type}_ORIG ${${_aom_config_setting}_${_aom_config_type}})
-    endforeach()
-endforeach()
-
 if(NOT libaom_POPULATED)
-    FetchContent_Populate(libaom)
-    add_subdirectory(${libaom_SOURCE_DIR} ${libaom_BINARY_DIR} EXCLUDE_FROM_ALL)
-
-    avif_set_aom_compile_options(aom)
-endif()
-
-foreach(_aom_config_setting CMAKE_C_FLAGS CMAKE_CXX_FLAGS CMAKE_EXE_LINKER_FLAGS)
-    foreach(_aom_config_type DEBUG RELEASE MINSIZEREL RELWITHDEBINFO)
-        set(${_aom_config_setting}_${_aom_config_type} ${${_aom_config_setting}_${_aom_config_type}_ORIG} CACHE STRING "" FORCE)
-        unset(${_aom_config_setting}_${_aom_config_type}_ORIG)
+    # Guard against the project setting cmake variables that would affect the parent build
+    # See comment above for avif_set_aom_compile_options
+    foreach(_config_setting CMAKE_C_FLAGS CMAKE_CXX_FLAGS CMAKE_EXE_LINKER_FLAGS)
+        foreach(_config_type DEBUG RELEASE MINSIZEREL RELWITHDEBINFO)
+            set(${_config_setting}_${_config_type}_ORIG ${${_config_setting}_${_config_type}})
+        endforeach()
     endforeach()
-endforeach()
 
-set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_ORIG} CACHE BOOL "" FORCE)
+    avif_fetchcontent_populate_cmake(libaom)
+    avif_set_aom_compile_options(aom)
+
+    foreach(_config_setting CMAKE_C_FLAGS CMAKE_CXX_FLAGS CMAKE_EXE_LINKER_FLAGS)
+        foreach(_config_type DEBUG RELEASE MINSIZEREL RELWITHDEBINFO)
+            set(${_config_setting}_${_config_type} ${${_config_setting}_${_config_type}_ORIG} CACHE STRING "" FORCE)
+            unset(${_config_setting}_${_config_type}_ORIG)
+        endforeach()
+    endforeach()
+    unset(_config_type)
+    unset(_config_setting)
+endif()
 
 # If we have libyuv, we disable CONFIG_LIBYUV so that aom does not include the libyuv
 # sources from its third-party vendor library. But we still want AOM to have libyuv, only
@@ -118,16 +118,14 @@ if(libyuv_FOUND)
 endif()
 
 set_property(TARGET aom PROPERTY AVIF_LOCAL ON)
-
-set(AOM_INCLUDE_DIR "${libaom_SOURCE_DIR}")
-set(AOM_LIBRARY aom)
-set(AOM_LIBRARIES ${AOM_LIBRARY})
-target_include_directories(aom INTERFACE ${AOM_INCLUDE_DIR} ${AOM_BINARY_DIR})
+target_include_directories(aom INTERFACE "${libaom_SOURCE_DIR}" ${AOM_BINARY_DIR})
 
 if(AVIF_LOCAL_AVM)
-    set(AVM_INCLUDE_DIR ${AOM_INCLUDE_DIR})
-    set(AVM_LIBRARY ${AOM_LIBRARY})
-    set(AVM_LIBRARIES ${AOM_LIBRARIES})
+    set(AVM_LIBRARY aom)
+    set(AVM_FOUND ON)
+else()
+    set(AOM_LIBRARY aom)
+    set(AOM_FOUND ON)
 endif()
 
 message(CHECK_PASS "fetched")
