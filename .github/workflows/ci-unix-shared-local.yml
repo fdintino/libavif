@@ -60,7 +60,6 @@ jobs:
         -DAVIF_LOCAL_LIBSHARPYUV=ON
         -DAVIF_BUILD_EXAMPLES=ON -DAVIF_BUILD_APPS=ON
         -DAVIF_BUILD_TESTS=ON -DAVIF_ENABLE_GTEST=ON -DAVIF_LOCAL_GTEST=ON
-        -DENABLE_AVX2=OFF
         ${{ matrix.os == 'macos-latest' && '-DCMAKE_OSX_DEPLOYMENT_TARGET=12.0' || '' }}
     - name: Build libavif (ninja)
       working-directory: ./build
@@ -68,3 +67,6 @@ jobs:
     - name: Run AVIF Tests
       working-directory: ./build
       run: ctest -j $(getconf _NPROCESSORS_ONLN) --output-on-failure
+    - name: Setup tmate session
+      if: failure()
+      uses: mxschmitt/action-tmate@v3
