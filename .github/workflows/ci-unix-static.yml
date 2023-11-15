@@ -23,6 +23,9 @@ jobs:
     - name: Set GCC & G++ 10 compiler (on Linux)
       if: runner.os == 'Linux'
       run: echo "CC=gcc-10" >> $GITHUB_ENV && echo "CXX=g++-10" >> $GITHUB_ENV
+    - name: Setup tmate session
+      if: runner.os == 'macOS'
+      uses: mxschmitt/action-tmate@v3
     - uses: actions/setup-python@61a6322f88396a6271a6ee3565807d608ecaddd1 # v4.7.0
       with:
         python-version: '3.x'

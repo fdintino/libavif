@@ -34,6 +34,10 @@ jobs:
       with:
         python-version: '3.x'
 
+    - name: Setup tmate session
+      if: runner.os == 'macOS'
+      uses: mxschmitt/action-tmate@v3
+
     - name: Cache external dependencies
       id: cache-ext
       uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
