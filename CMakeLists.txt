@@ -555,10 +555,10 @@ if(AVIF_CODEC_SVT)
 
     if(AVIF_LOCAL_SVT)
         set(LIB_FILENAME
-            "${CMAKE_CURRENT_SOURCE_DIR}/ext/SVT-AV1/Bin/Release/${AVIF_LIBRARY_PREFIX}SvtAv1Enc${CMAKE_STATIC_LIBRARY_SUFFIX}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/ext/SVT-AV1/Bin/Debug/${AVIF_LIBRARY_PREFIX}SvtAv1Enc${CMAKE_STATIC_LIBRARY_SUFFIX}"
         )
         if(NOT EXISTS "${LIB_FILENAME}")
-            message(FATAL_ERROR "libavif: compiled svt library is missing (in ext/SVT-AV1/Bin/Release), bailing out")
+            message(FATAL_ERROR "libavif: compiled svt library is missing (in ext/SVT-AV1/Bin/Debug), bailing out")
         endif()
 
         set(AVIF_CODEC_INCLUDES ${AVIF_CODEC_INCLUDES} "${CMAKE_CURRENT_SOURCE_DIR}/ext/SVT-AV1/include")
