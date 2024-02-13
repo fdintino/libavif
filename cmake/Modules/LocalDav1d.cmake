@@ -6,8 +6,24 @@ if(NOT AVIF_LOCAL_DAV1D_REPO)
 endif()
 
 function(avif_build_local_dav1d)
-    set(source_dir "${AVIF_SOURCE_DIR}/ext/dav1d")
-    set(binary_dir "${CMAKE_CURRENT_BINARY_DIR}/ext/dav1d")
+    set(ext_source_dir "${AVIF_SOURCE_DIR}/ext/dav1d")
+
+    set(prefix "${CMAKE_CURRENT_BINARY_DIR}/dav1d-prefix")
+    if(ANDROID_ABI)
+        set(prefix "${prefix}/${ANDROID_ABI}")
+    endif()
+
+    set(download_step_args)
+    if(EXISTS "${ext_source_dir}")
+        message(STATUS "libavif: ${ext_source_dir} found, using as SOURCE_DIR")
+        set(source_dir "${ext_source_dir}")
+    else()
+        message(STATUS "libavif: ${ext_source_dir} not found, fetching")
+        set(source_dir "${prefix}/src/dav1d")
+        list(APPEND download_step_args GIT_REPOSITORY https://code.videolan.org/videolan/dav1d.git GIT_TAG
+             ${AVIF_LOCAL_DAV1D_TAG} GIT_SHALLOW ON
+        )
+    endif()
 
     find_program(NINJA_EXECUTABLE NAMES ninja ninja-build REQUIRED)
     find_program(MESON_EXECUTABLE meson REQUIRED)
@@ -22,7 +38,6 @@ function(avif_build_local_dav1d)
 
     if(ANDROID)
         list(APPEND CMAKE_PROGRAM_PATH "${ANDROID_TOOLCHAIN_ROOT}/bin")
-        set(binary_dir "${binary_dir}/${ANDROID_ABI}")
 
         if(CMAKE_SYSTEM_PROCESSOR STREQUAL "armv7-a")
             set(android_arch "arm")
@@ -62,16 +77,16 @@ function(avif_build_local_dav1d)
         set(EXTRA_ARGS "--cross-file=${CROSS_FILE}")
     endif()
 
-    set(install_prefix "${binary_dir}/install.libavif")
+    set(install_dir "${prefix}/install.libavif")
 
-    file(MAKE_DIRECTORY ${install_prefix}/include)
+    file(MAKE_DIRECTORY ${install_dir}/include)
 
     ExternalProject_Add(
         dav1d
-        GIT_REPOSITORY https://code.videolan.org/videolan/dav1d.git
+        ${download_step_args}
         SOURCE_DIR "${source_dir}"
-        PREFIX "${binary_dir}"
-        INSTALL_DIR "${install_prefix}"
+        PREFIX "${prefix}"
+        INSTALL_DIR "${install_dir}"
         LIST_SEPARATOR |
         GIT_TAG ${AVIF_LOCAL_DAV1D_TAG}
         GIT_SHALLOW ON
@@ -86,12 +101,14 @@ function(avif_build_local_dav1d)
     )
 
     add_library(dav1d::dav1d STATIC IMPORTED)
-    set_target_properties(dav1d::dav1d PROPERTIES IMPORTED_LOCATION ${install_prefix}/lib/libdav1d.a AVIF_LOCAL ON)
-    target_include_directories(dav1d::dav1d INTERFACE "${install_prefix}/include")
-    target_link_directories(dav1d::dav1d INTERFACE ${install_prefix}/lib)
+    set_target_properties(dav1d::dav1d PROPERTIES IMPORTED_LOCATION ${install_dir}/lib/libdav1d.a AVIF_LOCAL ON)
+    target_include_directories(dav1d::dav1d INTERFACE "${install_dir}/include")
+    target_link_directories(dav1d::dav1d INTERFACE ${install_dir}/lib)
     add_dependencies(dav1d::dav1d dav1d)
 
-    set_target_properties(dav1d::dav1d PROPERTIES FOLDER "ext/dav1d")
+    if(EXISTS "${ext_source_dir}")
+        set_target_properties(dav1d::dav1d PROPERTIES FOLDER "ext/dav1d")
+    endif()
 endfunction()
 
 avif_build_local_dav1d()
