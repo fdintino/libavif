@@ -3,12 +3,12 @@ set(AVIF_LOCAL_SVT_GIT_TAG "v1.7.0")
 set(SVT_LIB_FILENAME "${AVIF_SOURCE_DIR}/ext/SVT-AV1/Bin/Release/${AVIF_LIBRARY_PREFIX}SvtAv1Enc${CMAKE_STATIC_LIBRARY_SUFFIX}")
 
 if(EXISTS "${SVT_LIB_FILENAME}")
-    message(STATUS "libavif: compiled svt library found in ext/SVT-AV1/Bin/Release")
+    message(STATUS "libavif: compiled svt library found at ${SVT_LIB_FILENAME}")
     add_library(SvtAv1Enc STATIC IMPORTED GLOBAL)
     set_target_properties(SvtAv1Enc PROPERTIES IMPORTED_LOCATION "${SVT_LIB_FILENAME}" AVIF_LOCAL ON)
     target_include_directories(SvtAv1Enc INTERFACE "${AVIF_SOURCE_DIR}/ext/SVT-AV1/include")
 else()
-    message(STATUS "libavif: compiled svt library not found in ext/SVT-AV1/Bin/Release; using FetchContent")
+    message(STATUS "libavif: compiled svt library not found at ${SVT_LIB_FILENAME}; using FetchContent")
     if(EXISTS "${AVIF_SOURCE_DIR}/ext/SVT-AV1")
         message(STATUS "libavif: ext/SVT-AV1 found; using as FetchContent SOURCE_DIR")
         set(FETCHCONTENT_SOURCE_DIR_SVT "${AVIF_SOURCE_DIR}/ext/SVT-AV1")
@@ -51,9 +51,13 @@ else()
     set(CMAKE_BUILD_TYPE_ORIG ${CMAKE_BUILD_TYPE})
     set(CMAKE_BUILD_TYPE Release CACHE INTERNAL "")
 
+    set(CMAKE_OUTPUT_DIRECTORY_ORIG "${CMAKE_OUTPUT_DIRECTORY}")
+    set(CMAKE_OUTPUT_DIRECTORY "${SVT_FETCHCONTENT_BINARY_DIR}" CACHE INTERNAL "")
+
     avif_fetchcontent_populate_cmake(svt)
 
     set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE_ORIG} CACHE STRING "" FORCE)
+    set(CMAKE_OUTPUT_DIRECTORY ${CMAKE_OUTPUT_DIRECTORY_ORIG} CACHE STRING "" FORCE)
 
     set(SVT_INCLUDE_DIR ${svt_BINARY_DIR}/include)
     file(MAKE_DIRECTORY ${SVT_INCLUDE_DIR}/svt-av1)
