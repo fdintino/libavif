@@ -20,8 +20,8 @@ set(AVIF_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 # Specify search path for CMake modules to be loaded by include() and find_package()
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
-string(REPLACE "-O3" "-O3 -g" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
-string(REPLACE "-O3" "-O3 -g" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
+# string(REPLACE "-O3" "-O3 -g" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
+# string(REPLACE "-O3" "-O3 -g" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 
 include(ExternalProject)
 include(FetchContent)

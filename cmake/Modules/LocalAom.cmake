@@ -104,6 +104,18 @@ else()
             endforeach()
         endforeach()
 
+        string(REPLACE -O3 -O2 CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
+
+        # Update the cache value while keeping its docstring unchanged.
+        set_property(CACHE CMAKE_C_FLAGS_RELEASE
+                     PROPERTY VALUE "${CMAKE_C_FLAGS_RELEASE}")
+
+        string(REPLACE -O3 -O2 CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
+
+        # Update the cache value while keeping its docstring unchanged.
+        set_property(CACHE CMAKE_CXX_FLAGS_RELEASE
+                    PROPERTY VALUE "${CMAKE_CXX_FLAGS_RELEASE}")
+
         avif_fetchcontent_populate_cmake(libaom)
 
         set(_aom_config RELEASE)
